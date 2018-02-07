@@ -7,7 +7,27 @@ main() async {
   var app = new Angel();
   app.logger = new Logger('angel')..onRecord.listen(print);
 
-  app.get('/', 'Hello HTTP/2!!!');
+  var publicDir = new Directory('example/public');
+  var indexHtml = new File.fromUri(publicDir.uri.resolve('index.html'));
+  var styleCss = new File.fromUri(publicDir.uri.resolve('style.css'));
+  var appJs = new File.fromUri(publicDir.uri.resolve('app.js'));
+
+  // Send files when requested
+  app
+    ..get('/style.css', (res) => res.sendFile(styleCss))
+    ..get('/app.js', (res) => res.sendFile(appJs));
+
+  app.get('/', (ResponseContext res) async {
+    // If the client is HTTP/2 and supports server push, let's
+    // send down /style.css and /app.js as well, to improve initial load time.
+    if (res is Http2ResponseContextImpl && res.canPush) {
+      await res.push('/style.css').sendFile(styleCss);
+      await res.push('/app.js').sendFile(appJs);
+    }
+
+    // Regardless of whether we pushed other resources, let's still send /index.html.
+    await res.sendFile(indexHtml);
+  });
 
   var ctx = new SecurityContext()
     ..useCertificateChain('dev.pem')

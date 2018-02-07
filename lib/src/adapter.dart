@@ -265,6 +265,11 @@ class AngelHttp2 {
               ?.elapsedMilliseconds ?? 'unknown'} ms)");
         }
       }
+
+      // Close all pushes
+      for (var push in res.pushes) {
+        await sendResponse(push.stream, req, push);
+      }
     });
   }
 

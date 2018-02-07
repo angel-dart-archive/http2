@@ -13,6 +13,16 @@ class Http2ResponseContextImpl extends ResponseContext {
 
   Http2ResponseContextImpl(this.app, this.stream, this._req);
 
+  final List<Http2ResponseContextImpl> _pushes = [];
+
+  /// Returns `true` if an attempt to [push] a resource will succeed.
+  ///
+  /// See [ServerTransportStream].`push`.
+  bool get canPush => stream.canPush;
+
+  /// Returns a [List] of all resources that have [push]ed to the client.
+  List<Http2ResponseContextImpl> get pushes => new List.unmodifiable(_pushes);
+
   @override
   RequestContext get correspondingRequest => _req;
 
@@ -137,5 +147,17 @@ class Http2ResponseContextImpl extends ResponseContext {
     _isClosed = true;
     await super.close();
     _useStream = false;
+  }
+
+  /// Pushes a resource to the client.
+  Http2ResponseContextImpl push(String path, {Map<String, String> headers: const {}}) {
+    var h = <Header>[];
+
+    for (var key in headers.keys) {
+      h.add(new Header.ascii(key, headers[key]));
+    }
+
+    var s = stream.push(h);
+    return new Http2ResponseContextImpl(app, s, _req);
   }
 }
