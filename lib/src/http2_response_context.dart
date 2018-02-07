@@ -46,6 +46,9 @@ class Http2ResponseContextImpl extends ResponseContext {
       headers.add(new Header.ascii(key.toLowerCase(), this.headers[key]));
     }
 
+    // Persist session ID
+    cookies.add(new Cookie('set-cookie', _req.session.id));
+
     // Send all cookies
     for (var cookie in cookies) {
       headers.add(new Header.ascii('set-cookie', cookie.toString()));

@@ -3,3 +3,4 @@ dependencies:
   angel_framework: ">=1.1.1 <2.0.0"
   http2: ">=0.1.7 <2.0.0"
   mock_request: ^1.0.0
+  uuid: ^0.5.3

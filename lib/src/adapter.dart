@@ -5,15 +5,19 @@ import 'package:angel_framework/angel_framework.dart' hide Header;
 import 'package:combinator/combinator.dart';
 import 'package:http2/src/artificial_server_socket.dart';
 import 'package:http2/transport.dart';
+import 'package:mock_request/mock_request.dart';
 import 'http2_request_context.dart';
 import 'http2_response_context.dart';
 import 'package:pool/pool.dart';
+import 'package:uuid/uuid.dart';
 import 'package:tuple/tuple.dart';
 
 class AngelHttp2 {
   final Angel app;
   final SecurityContext securityContext;
   final StreamController<HttpRequest> _onHttp1 = new StreamController();
+  final Map<String, MockHttpSession> _sessions = {};
+  final Uuid _uuid = new Uuid();
   ArtificialServerSocket _artificial;
   HttpServer _httpServer;
   StreamController<SecureSocket> _http1;
@@ -73,7 +77,7 @@ class AngelHttp2 {
   }
 
   Future handleClient(ServerTransportStream stream, SecureSocket socket) async {
-    var req = await Http2RequestContextImpl.from(stream, socket, app);
+    var req = await Http2RequestContextImpl.from(stream, socket, app, _sessions, _uuid);
     var res = new Http2ResponseContextImpl(app, stream, req);
 
     try {

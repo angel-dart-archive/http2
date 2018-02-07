@@ -5,6 +5,7 @@ import 'package:angel_framework/angel_framework.dart';
 import 'package:body_parser/body_parser.dart';
 import 'package:http2/transport.dart';
 import 'package:mock_request/mock_request.dart';
+import 'package:uuid/uuid.dart';
 
 class Http2RequestContextImpl extends RequestContext {
   BytesBuilder _buf;
@@ -17,7 +18,11 @@ class Http2RequestContextImpl extends RequestContext {
   Uri _uri;
 
   static Future<Http2RequestContextImpl> from(
-      ServerTransportStream stream, Socket socket, Angel app) async {
+      ServerTransportStream stream,
+      Socket socket,
+      Angel app,
+      Map<String, MockHttpSession> sessions,
+      Uuid uuid) async {
     var req = new Http2RequestContextImpl()
       .._socket = socket
       .._stream = stream;
@@ -60,7 +65,7 @@ class Http2RequestContextImpl extends RequestContext {
               for (var cookieString in cookieStrings) {
                 try {
                   cookies.add(new Cookie.fromSetCookieValue(cookieString));
-                } catch(_) {
+                } catch (_) {
                   // Ignore malformed cookies, and just don't add them to the container.
                 }
               }
@@ -75,7 +80,22 @@ class Http2RequestContextImpl extends RequestContext {
       if (msg.endStream) break;
     }
 
-    return req.._cookies = new List.unmodifiable(cookies);
+    req._cookies = new List.unmodifiable(cookies);
+
+    // Apply session
+    var dartSessId =
+        cookies.firstWhere((c) => c.name == 'DARTSESSID', orElse: () => null);
+
+    if (dartSessId == null) {
+      dartSessId = new Cookie('DARTSESSID', uuid.v4());
+    }
+
+    req._session = sessions.putIfAbsent(
+      dartSessId.value,
+      () => new MockHttpSession(id: dartSessId.value),
+    );
+
+    return req;
   }
 
   @override
