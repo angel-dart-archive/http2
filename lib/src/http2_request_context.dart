@@ -47,9 +47,12 @@ class Http2RequestContextImpl extends RequestContext {
               uri = uri.replace(scheme: value);
               break;
             case ':authority':
-              // TODO: Find out what to do with this
-              headers.set('host', value);
-              //uri = uri.replace(host: value);
+              var authorityUri = Uri.parse(value);
+              uri = uri.replace(
+                host: authorityUri.host,
+                port: authorityUri.port,
+                userInfo: authorityUri.userInfo,
+              );
               break;
             default:
               headers.add(ASCII.decode(header.name), value);
