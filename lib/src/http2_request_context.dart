@@ -7,9 +7,8 @@ import 'package:http2/transport.dart';
 import 'package:mock_request/mock_request.dart';
 
 class Http2RequestContextImpl extends RequestContext {
-  // TODO: Make this immutable
-  final List<Cookie> cookies = [];
   BytesBuilder _buf;
+  List<Cookie> _cookies;
   HttpHeaders _headers;
   String _method, _override, _path;
   HttpSession _session;
@@ -27,6 +26,7 @@ class Http2RequestContextImpl extends RequestContext {
     var headers = req._headers = new MockHttpHeaders();
     var uri = req._uri =
         Uri.parse('https://${socket.address.address}:${socket.port}');
+    var cookies = <Cookie>[];
 
     await for (var msg in stream.incomingMessages) {
       if (msg is DataStreamMessage) {
@@ -54,6 +54,17 @@ class Http2RequestContextImpl extends RequestContext {
                 userInfo: authorityUri.userInfo,
               );
               break;
+            case 'cookie':
+              var cookieStrings = value.split(';').map((s) => s.trim());
+
+              for (var cookieString in cookieStrings) {
+                try {
+                  cookies.add(new Cookie.fromSetCookieValue(cookieString));
+                } catch(_) {
+                  // Ignore malformed cookies, and just don't add them to the container.
+                }
+              }
+              break;
             default:
               headers.add(ASCII.decode(header.name), value);
               break;
@@ -64,8 +75,11 @@ class Http2RequestContextImpl extends RequestContext {
       if (msg.endStream) break;
     }
 
-    return req;
+    return req.._cookies = new List.unmodifiable(cookies);
   }
+
+  @override
+  List<Cookie> get cookies => _cookies;
 
   /// The underlying HTTP/2 [ServerTransportStream].
   ServerTransportStream get stream => _stream;
