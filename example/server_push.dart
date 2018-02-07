@@ -2,10 +2,11 @@ import 'dart:io';
 import 'package:angel_framework/angel_framework.dart';
 import 'package:angel_http2/angel_http2.dart';
 import 'package:logging/logging.dart';
+import 'pretty_logging.dart';
 
 main() async {
   var app = new Angel();
-  app.logger = new Logger('angel')..onRecord.listen(print);
+  app.logger = new Logger('angel')..onRecord.listen(prettyLog);
 
   var publicDir = new Directory('example/public');
   var indexHtml = new File.fromUri(publicDir.uri.resolve('index.html'));
@@ -14,19 +15,19 @@ main() async {
 
   // Send files when requested
   app
-    ..get('/style.css', (res) => res.sendFile(styleCss))
-    ..get('/app.js', (res) => res.sendFile(appJs));
+    ..get('/style.css', (res) => res.streamFile(styleCss))
+    ..get('/app.js', (res) => res.streamFile(appJs));
 
   app.get('/', (ResponseContext res) async {
+    // Regardless of whether we pushed other resources, let's still send /index.html.
+    await res.streamFile(indexHtml);
+
     // If the client is HTTP/2 and supports server push, let's
     // send down /style.css and /app.js as well, to improve initial load time.
     if (res is Http2ResponseContextImpl && res.canPush) {
-      await res.push('/style.css').sendFile(styleCss);
-      await res.push('/app.js').sendFile(appJs);
+      await res.push('/style.css').streamFile(styleCss);
+      await res.push('/app.js').streamFile(appJs);
     }
-
-    // Regardless of whether we pushed other resources, let's still send /index.html.
-    await res.sendFile(indexHtml);
   });
 
   var ctx = new SecurityContext()

@@ -56,6 +56,11 @@ To push a resource, call `Http2ResponseContextImpl.push`. This method itself ret
 `Http2ResponseContextImpl`, which means that pushed resources also can be used with API's
 like `sendFile`, `serialize`, and everything available for use with a `ResponseContext`.
 
+You **must** use streaming methods to push content via server push.
+i.e. `addStream`, `pipe`, `streamFile`.
+
+Response buffering does not work with server push.
+
 ```dart
 configureServer(Angel app) async {
     var publicDir = new Directory('example/public');
@@ -69,15 +74,15 @@ configureServer(Angel app) async {
       ..get('/app.js', (res) => res.sendFile(appJs));
     
     app.get('/', (ResponseContext res) async {
+      // Regardless of whether we pushed other resources, let's still send /index.html.
+      await res.streamFile(indexHtml);
+  
       // If the client is HTTP/2 and supports server push, let's
       // send down /style.css and /app.js as well, to improve initial load time.
       if (res is Http2ResponseContextImpl && res.canPush) {
-        await res.push('/style.css').sendFile(styleCss);
-        await res.push('/app.js').sendFile(appJs);
+        await res.push('/style.css').streamFile(styleCss);
+        await res.push('/app.js').streamFile(appJs);
       }
-    
-      // Regardless of whether we pushed other resources, let's still send /index.html.
-      await res.sendFile(indexHtml);
     });
 }
 ```

@@ -9,9 +9,12 @@ class Http2ResponseContextImpl extends ResponseContext {
   final Angel app;
   final ServerTransportStream stream;
   final Http2RequestContextImpl _req;
-  bool _useStream = false, _isClosed = false;
+  bool _useStream = false, _isClosed = false, _isPush = false;
+  Uri _targetUri;
 
-  Http2ResponseContextImpl(this.app, this.stream, this._req);
+  Http2ResponseContextImpl(this.app, this.stream, this._req) {
+    _targetUri = _req.uri;
+  }
 
   final List<Http2ResponseContextImpl> _pushes = [];
 
@@ -26,6 +29,8 @@ class Http2ResponseContextImpl extends ResponseContext {
   @override
   RequestContext get correspondingRequest => _req;
 
+  Uri get targetUri => _targetUri;
+
   @override
   HttpResponse get io => null;
 
@@ -37,6 +42,8 @@ class Http2ResponseContextImpl extends ResponseContext {
 
   /// Write headers, status, etc. to the underlying [stream].
   void finalize() {
+    if (_isPush) return;
+
     var headers = <Header>[
       new Header.ascii(':status', statusCode.toString()),
     ];
@@ -47,7 +54,7 @@ class Http2ResponseContextImpl extends ResponseContext {
     }
 
     // Persist session ID
-    cookies.add(new Cookie('set-cookie', _req.session.id));
+    cookies.add(new Cookie('DARTSESSID', _req.session.id));
 
     // Send all cookies
     for (var cookie in cookies) {
@@ -155,6 +162,10 @@ class Http2ResponseContextImpl extends ResponseContext {
   /// Pushes a resource to the client.
   Http2ResponseContextImpl push(String path,
       {Map<String, String> headers: const {}, String method: 'GET'}) {
+    if (isOpen)
+      throw new StateError(
+          'You can only push resources after the main response context is closed. You will need to use streaming methods, i.e. `addStream`.');
+
     var targetUri = _req.uri.replace(path: path);
 
     var h = <Header>[
@@ -169,6 +180,14 @@ class Http2ResponseContextImpl extends ResponseContext {
     }
 
     var s = stream.push(h);
-    return new Http2ResponseContextImpl(app, s, _req);
+    var r = new Http2ResponseContextImpl(app, s, _req)
+      .._isPush = true
+      .._targetUri = targetUri;
+    _pushes.add(r);
+    return r;
+  }
+
+  void internalReopen() {
+    _isClosed = false;
   }
 }

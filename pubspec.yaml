@@ -1,6 +1,8 @@
-name: angel_http2
-dependencies:
+name: "angel_http2"
+dependencies: 
   angel_framework: ">=1.1.1 <2.0.0"
   http2: ">=0.1.7 <2.0.0"
-  mock_request: ^1.0.0
-  uuid: ^0.5.3
+  mock_request: "^1.0.0"
+  uuid: "^0.5.3"
+dev_dependencies: 
+  console: "^2.2.4"
