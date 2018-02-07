@@ -37,7 +37,6 @@ class AngelHttp2 {
   /// Fires when an HTTP/1.x request is received.
   Stream<HttpRequest> get onHttp1 => _onHttp1.stream;
 
-  // TODO: Add fromSecurityContext, secure
   Future<SecureServerSocket> startServer(
       [address, port, ServerSettings settings]) async {
     _socket = await _serverGenerator(
