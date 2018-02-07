@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:angel_framework/angel_framework.dart';
+import 'package:angel_framework/angel_framework.dart' hide Header;
 import 'package:http2/src/artificial_server_socket.dart';
 import 'package:http2/transport.dart';
 import 'http2_request_context.dart';
@@ -51,7 +51,6 @@ class AngelHttp2 {
         _http1.add(socket);
       } else if (socket.selectedProtocol == 'h2' ||
           socket.selectedProtocol == 'h2-14') {
-        print('huh');
         var connection =
             new ServerTransportConnection.viaSocket(socket, settings: settings);
         connection.incomingStreams.listen((stream) async {
@@ -68,10 +67,10 @@ class AngelHttp2 {
 
     return _socket;
   }
-
   Future handleClient(ServerTransportStream stream, SecureSocket socket) async {
     var req = await Http2RequestContextImpl.from(stream, socket, app);
-    print(req.uri);
+    // TODO: Handle request
+    await stream.outgoingMessages.close();
   }
 
   Future close() async {

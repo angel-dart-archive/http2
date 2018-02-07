@@ -36,7 +36,14 @@ main() async {
   var socket = await SecureSocket.connect(server.address, server.port,
       onBadCertificate: (_) => true, supportedProtocols: ['h2', 'http/1.1']);
   var connection = new ClientTransportConnection.viaSocket(socket);
-  connection.makeRequest([
-    new Header.ascii('user-agent', 'yup'),
-  ], endStream: true);
+
+  var uri = Uri.parse('https://${server.address.address}:${server.port}');
+  var headers = [
+    new Header.ascii(':method', 'GET'),
+    new Header.ascii(':path', uri.path),
+    new Header.ascii(':scheme', uri.scheme),
+    new Header.ascii(':authority', uri.host),
+  ];
+  connection.makeRequest(headers, endStream: true);
+  await connection.finish();
 }

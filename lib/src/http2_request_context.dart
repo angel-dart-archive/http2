@@ -25,7 +25,8 @@ class Http2RequestContextImpl extends RequestContext {
 
     var buf = req._buf = new BytesBuilder();
     var headers = req._headers = new MockHttpHeaders();
-    var uri = req._uri = new Uri();
+    var uri = req._uri =
+        Uri.parse('https://${socket.address.address}:${socket.port}');
 
     await for (var msg in stream.incomingMessages) {
       if (msg is DataStreamMessage) {
@@ -46,7 +47,9 @@ class Http2RequestContextImpl extends RequestContext {
               uri = uri.replace(scheme: value);
               break;
             case ':authority':
-              uri = uri.replace(host: value);
+              // TODO: Find out what to do with this
+              headers.set('host', value);
+              //uri = uri.replace(host: value);
               break;
             default:
               headers.add(ASCII.decode(header.name), value);
