@@ -1,8 +1,16 @@
-import 'dart:io';
-import 'package:angel_framework/angel_framework.dart';
-import 'package:angel_http2/angel_http2.dart';
-import 'package:logging/logging.dart';
+# http2
+An [Angel](https://angel-dart.github.io) adapter to serve applications over
+HTTP/2.
 
+# Usage
+The library `package:angel_http2/angel_http2.dart` exports `AngelHttp2`,
+a class that implements a multi-protocol server. HTTP/2 requests will be
+handled by the class, while HTTP/1.x requests will be fired out of the
+`onHttp1` stream. Typically, you should hook up the `onHttp1` stream to
+an instance of `AngelHttp` to serve the same application instance over
+multiple protocols.
+
+```dart
 main() async {
   var app = new Angel();
   app.logger = new Logger('angel')..onRecord.listen(print);
@@ -32,3 +40,6 @@ main() async {
   var server = await http2.startServer('127.0.0.1', 3000);
   print('Listening at https://${server.address.address}:${server.port}');
 }
+```
+
+## Server Push
