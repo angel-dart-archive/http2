@@ -138,7 +138,7 @@ class Http2ResponseContextImpl extends ResponseContext {
     if (_useStream) {
       try {
         await stream.outgoingMessages.close();
-      } catch(_) {
+      } catch (_) {
         // This only seems to occur on `MockHttpRequest`, but
         // this try/catch prevents a crash.
       }
@@ -150,8 +150,16 @@ class Http2ResponseContextImpl extends ResponseContext {
   }
 
   /// Pushes a resource to the client.
-  Http2ResponseContextImpl push(String path, {Map<String, String> headers: const {}}) {
-    var h = <Header>[];
+  Http2ResponseContextImpl push(String path,
+      {Map<String, String> headers: const {}, String method: 'GET'}) {
+    var targetUri = _req.uri.replace(path: path);
+
+    var h = <Header>[
+      new Header.ascii(':authority', targetUri.authority),
+      new Header.ascii(':method', method),
+      new Header.ascii(':path', targetUri.path),
+      new Header.ascii(':scheme', targetUri.scheme),
+    ];
 
     for (var key in headers.keys) {
       h.add(new Header.ascii(key, headers[key]));
