@@ -1,4 +1,7 @@
 # http2
+[![Pub](https://img.shields.io/pub/v/angel_http2.svg)](https://pub.dartlang.org/packages/angel_http2)
+[![build status](https://travis-ci.org/angel-dart/http2.svg)](https://travis-ci.org/angel-dart/http2)
+
 An [Angel](https://angel-dart.github.io) adapter to serve applications over
 HTTP/2.
 Supports server push, falling back to HTTP/1.x, and more.
