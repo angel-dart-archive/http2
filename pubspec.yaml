@@ -4,3 +4,6 @@ dependencies:
   http2: ">=0.1.7 <2.0.0"
   mock_request: ^1.0.0
   uuid: ^0.5.3
+dev_dependencies:
+  http: ^0.11.3
+  test: ^0.12.0
