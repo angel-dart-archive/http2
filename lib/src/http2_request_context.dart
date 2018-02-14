@@ -7,6 +7,8 @@ import 'package:http2/transport.dart';
 import 'package:mock_request/mock_request.dart';
 import 'package:uuid/uuid.dart';
 
+final RegExp _straySlashes = new RegExp(r'(^/+)|(/+$)');
+
 class Http2RequestContextImpl extends RequestContext {
   BytesBuilder _buf;
   List<Cookie> _cookies;
@@ -24,13 +26,15 @@ class Http2RequestContextImpl extends RequestContext {
       Map<String, MockHttpSession> sessions,
       Uuid uuid) async {
     var req = new Http2RequestContextImpl()
+      ..app = app
       .._socket = socket
       .._stream = stream;
 
     var buf = req._buf = new BytesBuilder();
     var headers = req._headers = new MockHttpHeaders();
-    var uri = req._uri =
-        Uri.parse('https://${socket.address.address}:${socket.port}');
+    String scheme = 'https',
+        authority = '${socket.address.address}:${socket.port}',
+        path = '';
     var cookies = <Cookie>[];
 
     await for (var msg in stream.incomingMessages) {
@@ -46,18 +50,15 @@ class Http2RequestContextImpl extends RequestContext {
               req._method = value;
               break;
             case ':path':
-              uri = uri.replace(path: value);
+              path = value.replaceAll(_straySlashes, '');
+              req._path = path;
+              if (path.isEmpty) req._path = '/';
               break;
             case ':scheme':
-              uri = uri.replace(scheme: value);
+              scheme = value;
               break;
             case ':authority':
-              var authorityUri = Uri.parse(value);
-              uri = uri.replace(
-                host: authorityUri.host,
-                port: authorityUri.port,
-                userInfo: authorityUri.userInfo,
-              );
+              authority = value;
               break;
             case 'cookie':
               var cookieStrings = value.split(';').map((s) => s.trim());
@@ -80,7 +81,9 @@ class Http2RequestContextImpl extends RequestContext {
       if (msg.endStream) break;
     }
 
-    req._cookies = new List.unmodifiable(cookies);
+    req
+      .._cookies = new List.unmodifiable(cookies)
+      .._uri = Uri.parse('$scheme://$authority').replace(path: path);
 
     // Apply session
     var dartSessId =

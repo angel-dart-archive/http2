@@ -70,14 +70,15 @@ class AngelHttp2 {
             .selectedProtocol} as an ALPN protocol.');
       }
     }, onError: (e, st) {
-      app.logger.warning('HTTP/2 incoming connection failure', e, st);
+      app.logger.warning('HTTP/2 incoming connection failure: ', e, st);
     });
 
     return _socket;
   }
 
   Future handleClient(ServerTransportStream stream, SecureSocket socket) async {
-    var req = await Http2RequestContextImpl.from(stream, socket, app, _sessions, _uuid);
+    var req = await Http2RequestContextImpl.from(
+        stream, socket, app, _sessions, _uuid);
     var res = new Http2ResponseContextImpl(app, stream, req);
 
     try {
@@ -193,27 +194,18 @@ class AngelHttp2 {
   /// Sends a response.
   Future sendResponse(ServerTransportStream stream, Http2RequestContextImpl req,
       Http2ResponseContextImpl res,
-      {bool ignoreFinalizers: false}) {
+      {bool ignoreFinalizers: false}) async {
     if (res.willCloseItself) return new Future.value();
 
-    Future finalizers = ignoreFinalizers == true
-        ? new Future.value()
-        : app.responseFinalizers.fold<Future>(
-            new Future.value(), (out, f) => out.then((_) => f(req, res)));
-
-    if (res.isOpen) res.end();
-
-    var headers = <Header>[];
-    res.finalize();
-
-    headers.add(
-      new Header.ascii('content-length', res.buffer.length.toString()),
-    );
+    for (var finalizer in app.responseFinalizers) {
+      await finalizer(req, res);
+    }
 
     // TODO: Support chunked transfer encoding in HTTP/2?
     // request.response.headers.chunkedTransferEncoding = res.chunked ?? true;
 
     List<int> outputBuffer = res.buffer.toBytes();
+    res.internalReopen();
 
     if (res.encoders.isNotEmpty) {
       var allowedEncodings =
@@ -237,43 +229,35 @@ class AngelHttp2 {
 
           if (encoder != null) {
             outputBuffer = res.encoders[key].convert(outputBuffer);
-            headers.addAll([
-              new Header.ascii('content-encoding', key),
-              new Header.ascii(
-                  'content-length', outputBuffer.length.toString()),
-            ]);
+            res.headers['content-encoding'] = key;
             break;
           }
         }
       }
     }
 
-    stream
-      ..sendHeaders(headers)
-      ..sendData(res.buffer.takeBytes());
+    res.headers['content-length'] = outputBuffer.length.toString();
 
-    return finalizers.then((_) async {
-      await stream.outgoingMessages.close();
+    await new Stream.fromIterable([outputBuffer]).pipe(res);
 
-      if (req.injections.containsKey(PoolResource)) {
-        req.injections[PoolResource].release();
+    // Close all pushes
+    for (var push in res.pushes) {
+      await sendResponse(push.stream, req, push);
+    }
+
+    if (req.injections.containsKey(PoolResource)) {
+      req.injections[PoolResource].release();
+    }
+
+    if (app.logger != null) {
+      var sw = req.grab<Stopwatch>(Stopwatch);
+
+      if (sw?.isRunning == true) {
+        sw?.stop();
+        app.logger.info("${res.statusCode} ${req.method} ${req.uri} (${sw
+            ?.elapsedMilliseconds ?? 'unknown'} ms)");
       }
-
-      if (app.logger != null) {
-        var sw = req.grab<Stopwatch>(Stopwatch);
-
-        if (sw.isRunning) {
-          sw?.stop();
-          app.logger.info("${res.statusCode} ${req.method} ${req.uri} (${sw
-              ?.elapsedMilliseconds ?? 'unknown'} ms)");
-        }
-      }
-
-      // Close all pushes
-      for (var push in res.pushes) {
-        await sendResponse(push.stream, req, push);
-      }
-    });
+    }
   }
 
   Future close() async {
