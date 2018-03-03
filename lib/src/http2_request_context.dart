@@ -154,12 +154,12 @@ class Http2RequestContextImpl extends RequestContext {
   HttpHeaders get headers => _headers;
 
   @override
-  Future<BodyParseResult> parseOnce() {
-    return null;
+  Future close() {
+    return super.close();
   }
 
   @override
-  Future close() {
-    return super.close();
+  Future<BodyParseResult> parseOnce() {
+    return null;
   }
 }
