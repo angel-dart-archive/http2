@@ -262,10 +262,10 @@ class AngelHttp2 {
 
   Future close() async {
     _http1.close();
-    _artificial.close();
+    //_artificial.close();
     _httpServer.close(force: true);
-    _onHttp1.close();
     _sub?.cancel();
     await _socket.close();
+   // _onHttp1.close();
   }
 }

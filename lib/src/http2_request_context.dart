@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:angel_framework/angel_framework.dart';
 import 'package:body_parser/body_parser.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:http2/transport.dart';
 import 'package:mock_request/mock_request.dart';
 import 'package:uuid/uuid.dart';
@@ -160,6 +161,10 @@ class Http2RequestContextImpl extends RequestContext {
 
   @override
   Future<BodyParseResult> parseOnce() {
-    return null;
+    return parseBodyFromStream(
+      new Stream.fromIterable([_buf.takeBytes()]),
+      contentType == null ? null : new MediaType.parse(contentType.toString()),
+      uri,
+    );
   }
 }

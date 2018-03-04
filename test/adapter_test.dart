@@ -32,7 +32,7 @@ void main() {
         ..end();
     });
 
-    app.post('/method', (RequestContext req) => req.method);
+    app.all('/method', (RequestContext req) => req.method);
 
     app.get('/json', {'foo': 'bar'});
 
@@ -50,7 +50,7 @@ void main() {
         ..end();
     });
 
-    app.get('/body', (RequestContext req) => req.headers);
+    app.post('/body', (RequestContext req) => req.lazyBody());
 
     var ctx = new SecurityContext()
       ..useCertificateChain('dev.pem')
@@ -73,14 +73,15 @@ void main() {
   });
 
   test('method parsed', () async {
-    var response = await client.delete(serverRoot);
+    var response = await client.delete(serverRoot.replace(path: '/method'));
     expect(response.body, JSON.encode('DELETE'));
   });
 
   test('json response', () async {
     var response = await client.get(serverRoot.replace(path: '/json'));
     expect(response.body, JSON.encode({'foo': 'bar'}));
-    expect(ContentType.parse(response.headers['content-type']).mimeType, ContentType.JSON.mimeType);
+    expect(ContentType.parse(response.headers['content-type']).mimeType,
+        ContentType.JSON.mimeType);
   });
 
   test('streamed response', () async {
@@ -99,17 +100,18 @@ void main() {
     expect(response.headers['x-angel'], 'http2');
   });
 
-  group(
-    'body parsing',
-    () {
-      // TODO(thosakwe): Implement body parsing
+  group('body parsing', () {
+    // TODO(thosakwe): Implement body parsing
 
-      test('urlencoded body parsed', () async {});
+    test('urlencoded body parsed', () async {});
 
-      test('json body parsed', () async {});
+    test('json body parsed', () async {
+      var response = await client.post(serverRoot.replace(path: '/body'),
+          headers: {'content-type': 'application/json'},
+          body: JSON.encode({'foo': 'bar'}));
+      print(response.body);
+    });
 
-      test('multipart body parsed', () async {});
-    },
-    skip: 'Body parsing not yet implemented',
-  );
+    test('multipart body parsed', () async {});
+  });
 }

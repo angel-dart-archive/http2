@@ -29,7 +29,22 @@ class Http2Client extends BaseClient {
       headers.add(new Header.ascii(k, v));
     });
 
-    return await connection.makeRequest(headers);
+    var bb = await request.finalize().fold<BytesBuilder>(new BytesBuilder(), (out, list) => out..add(list));
+    var body = bb.takeBytes();
+
+    if (body.isNotEmpty) {
+      headers.add(new Header.ascii('content-length', body.length.toString()));
+    }
+
+    var stream = await connection.makeRequest(headers);
+
+    if (body.isNotEmpty) {
+      stream.sendData(body, endStream: true);
+    } else {
+      stream.outgoingMessages.close();
+    }
+
+    return stream;
   }
 
   /// Returns `true` if the response stream was closed.
@@ -37,6 +52,7 @@ class Http2Client extends BaseClient {
       Map<String, String> headers, BytesBuilder body) {
     var c = new Completer<bool>();
     var closed = false;
+
     stream.incomingMessages.listen(
       (msg) {
         if (msg is HeadersStreamMessage) {
@@ -54,6 +70,7 @@ class Http2Client extends BaseClient {
       onError: c.completeError,
       onDone: () => c.complete(closed),
     );
+
     return c.future;
   }
 
