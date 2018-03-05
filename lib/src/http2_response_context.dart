@@ -5,18 +5,18 @@ import 'package:angel_framework/angel_framework.dart' hide Header;
 import 'package:http2/transport.dart';
 import 'http2_request_context.dart';
 
-class Http2ResponseContextImpl extends ResponseContext {
+class Http2ResponseContext extends ResponseContext {
   final Angel app;
   final ServerTransportStream stream;
-  final Http2RequestContextImpl _req;
+  final Http2RequestContext _req;
   bool _useStream = false, _isClosed = false, _isPush = false;
   Uri _targetUri;
 
-  Http2ResponseContextImpl(this.app, this.stream, this._req) {
+  Http2ResponseContext(this.app, this.stream, this._req) {
     _targetUri = _req.uri;
   }
 
-  final List<Http2ResponseContextImpl> _pushes = [];
+  final List<Http2ResponseContext> _pushes = [];
 
   /// Returns `true` if an attempt to [push] a resource will succeed.
   ///
@@ -24,7 +24,7 @@ class Http2ResponseContextImpl extends ResponseContext {
   bool get canPush => stream.canPush;
 
   /// Returns a [List] of all resources that have [push]ed to the client.
-  List<Http2ResponseContextImpl> get pushes => new List.unmodifiable(_pushes);
+  List<Http2ResponseContext> get pushes => new List.unmodifiable(_pushes);
 
   @override
   RequestContext get correspondingRequest => _req;
@@ -98,7 +98,7 @@ class Http2ResponseContextImpl extends ResponseContext {
 
     Stream<List<int>> output = stream;
 
-    if (encoders.isNotEmpty && correspondingRequest != null) {
+    if (!headers.containsKey('content-encoding') && encoders.isNotEmpty && correspondingRequest != null) {
       var allowedEncodings =
           (correspondingRequest.headers['accept-encoding'] ?? []).map((str) {
         // Ignore quality specifications in accept-encoding
@@ -119,9 +119,10 @@ class Http2ResponseContextImpl extends ResponseContext {
 
         if (encoder != null) {
           if (firstStream) {
-            this
-                .stream
-                .sendHeaders([new Header.ascii('content-encoding', key)]);
+            this.stream.sendHeaders([
+              new Header.ascii(
+                  'content-encoding', headers['content-encoding'] = key)
+            ]);
           }
 
           output = encoders[key].bind(output);
@@ -138,7 +139,8 @@ class Http2ResponseContextImpl extends ResponseContext {
     if (_isClosed && !_useStream)
       throw ResponseContext.closed();
     else if (_useStream)
-      stream.sendData(data);
+      //stream.sendData(data);
+      addStream(new Stream.fromIterable([data]));
     else
       buffer.add(data);
   }
@@ -160,7 +162,7 @@ class Http2ResponseContextImpl extends ResponseContext {
   }
 
   /// Pushes a resource to the client.
-  Http2ResponseContextImpl push(String path,
+  Http2ResponseContext push(String path,
       {Map<String, String> headers: const {}, String method: 'GET'}) {
     if (isOpen)
       throw new StateError(
@@ -180,7 +182,7 @@ class Http2ResponseContextImpl extends ResponseContext {
     }
 
     var s = stream.push(h);
-    var r = new Http2ResponseContextImpl(app, s, _req)
+    var r = new Http2ResponseContext(app, s, _req)
       .._isPush = true
       .._targetUri = targetUri;
     _pushes.add(r);

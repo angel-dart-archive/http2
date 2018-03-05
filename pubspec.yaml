@@ -1,8 +1,19 @@
 name: angel_http2
+version: 1.0.0
+description: An Angel adapter to serve applications over HTTP/2. Supports server push, falling back to HTTP/1.x, and more.
+author: Tobe O <thosakwe@gmail.com>
+homepage: https://github.com/angel-dart/http2
+environment:
+  sdk: ">=1.8.0 <3.0.0"
 dependencies:
   angel_framework: ">=1.1.1 <2.0.0"
+  body_parser: ^1.0.0
+  combinator: ">=1.0.0-beta <2.0.0"
+  http_parser: ^3.0.0
   http2: ">=0.1.7 <2.0.0"
   mock_request: ^1.0.0
+  pool: ^1.0.0
+  tuple: ^1.0.0
   uuid: ^0.5.3
 dev_dependencies:
   console: ^2.0.0

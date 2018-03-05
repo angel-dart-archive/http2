@@ -1,5 +1,3 @@
-import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'package:angel_framework/angel_framework.dart';
 import 'package:angel_http2/angel_http2.dart';
@@ -7,7 +5,11 @@ import 'package:logging/logging.dart';
 import 'pretty_logging.dart';
 
 main() async {
-  var app = new Angel();
+  var app = new Angel()
+    ..injectEncoders({
+      'gzip': GZIP.encoder,
+      'deflate': ZLIB.encoder,
+    });
   app.logger = new Logger('angel')..onRecord.listen(prettyLog);
 
   app.get('/', 'Hello HTTP/2!!!');

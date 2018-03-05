@@ -8,10 +8,12 @@ import 'package:http2/transport.dart';
 import 'package:mock_request/mock_request.dart';
 import 'package:uuid/uuid.dart';
 
+final RegExp _comma = new RegExp(r',\s*');
 final RegExp _straySlashes = new RegExp(r'(^/+)|(/+$)');
 
-class Http2RequestContextImpl extends RequestContext {
+class Http2RequestContext extends RequestContext {
   BytesBuilder _buf;
+  ContentType _contentType;
   List<Cookie> _cookies;
   HttpHeaders _headers;
   String _method, _override, _path;
@@ -20,13 +22,13 @@ class Http2RequestContextImpl extends RequestContext {
   ServerTransportStream _stream;
   Uri _uri;
 
-  static Future<Http2RequestContextImpl> from(
+  static Future<Http2RequestContext> from(
       ServerTransportStream stream,
       Socket socket,
       Angel app,
       Map<String, MockHttpSession> sessions,
       Uuid uuid) async {
-    var req = new Http2RequestContextImpl()
+    var req = new Http2RequestContext()
       ..app = app
       .._socket = socket
       .._stream = stream;
@@ -73,13 +75,13 @@ class Http2RequestContextImpl extends RequestContext {
               }
               break;
             default:
-              headers.add(ASCII.decode(header.name), value);
+              headers.add(ASCII.decode(header.name), value.split(_comma));
               break;
           }
         }
       }
 
-      if (msg.endStream) break;
+      //if (msg.endStream) break;
     }
 
     req
@@ -119,7 +121,6 @@ class Http2RequestContextImpl extends RequestContext {
 
   @override
   HttpSession get session {
-    // TODO: Real session, stored in memory via MapService?
     return _session;
   }
 
@@ -128,12 +129,14 @@ class Http2RequestContextImpl extends RequestContext {
 
   @override
   String get path {
-    // TODO: Get normalized path
     return _path;
   }
 
   @override
-  ContentType get contentType => headers.contentType;
+  ContentType get contentType =>
+      _contentType ??= (headers['content-type'] == null
+          ? null
+          : ContentType.parse(headers.value('content-type')));
 
   @override
   String get originalMethod {
@@ -165,6 +168,7 @@ class Http2RequestContextImpl extends RequestContext {
       new Stream.fromIterable([_buf.takeBytes()]),
       contentType == null ? null : new MediaType.parse(contentType.toString()),
       uri,
+      storeOriginalBuffer: app.storeOriginalBuffer,
     );
   }
 }

@@ -77,9 +77,10 @@ class AngelHttp2 {
   }
 
   Future handleClient(ServerTransportStream stream, SecureSocket socket) async {
-    var req = await Http2RequestContextImpl.from(
-        stream, socket, app, _sessions, _uuid);
-    var res = new Http2ResponseContextImpl(app, stream, req);
+    var req =
+        await Http2RequestContext.from(stream, socket, app, _sessions, _uuid);
+    var res = new Http2ResponseContext(app, stream, req)
+      ..encoders.addAll(app.encoders);
 
     try {
       var path = req.path;
@@ -160,8 +161,8 @@ class AngelHttp2 {
   Future handleAngelHttpException(
       AngelHttpException e,
       StackTrace st,
-      Http2RequestContextImpl req,
-      Http2ResponseContextImpl res,
+      Http2RequestContext req,
+      Http2ResponseContext res,
       ServerTransportStream stream,
       {bool ignoreFinalizers: false}) async {
     if (req == null || res == null) {
@@ -192,8 +193,8 @@ class AngelHttp2 {
   }
 
   /// Sends a response.
-  Future sendResponse(ServerTransportStream stream, Http2RequestContextImpl req,
-      Http2ResponseContextImpl res,
+  Future sendResponse(ServerTransportStream stream, Http2RequestContext req,
+      Http2ResponseContext res,
       {bool ignoreFinalizers: false}) async {
     if (res.willCloseItself) return new Future.value();
 
@@ -201,11 +202,9 @@ class AngelHttp2 {
       await finalizer(req, res);
     }
 
-    // TODO: Support chunked transfer encoding in HTTP/2?
-    // request.response.headers.chunkedTransferEncoding = res.chunked ?? true;
-
     List<int> outputBuffer = res.buffer.toBytes();
     res.internalReopen();
+
 
     if (res.encoders.isNotEmpty) {
       var allowedEncodings =
@@ -215,6 +214,7 @@ class AngelHttp2 {
         if (!str.contains(';')) return str;
         return str.split(';')[0];
       });
+
 
       if (allowedEncodings != null) {
         for (var encodingName in allowedEncodings) {
@@ -228,13 +228,17 @@ class AngelHttp2 {
           }
 
           if (encoder != null) {
+            //print(new String.fromCharCodes(outputBuffer));
             outputBuffer = res.encoders[key].convert(outputBuffer);
+            //print(new String.fromCharCodes(outputBuffer));
             res.headers['content-encoding'] = key;
+            //print(res.headers);
             break;
           }
         }
       }
     }
+
 
     res.headers['content-length'] = outputBuffer.length.toString();
 
@@ -266,6 +270,6 @@ class AngelHttp2 {
     _httpServer.close(force: true);
     _sub?.cancel();
     await _socket.close();
-   // _onHttp1.close();
+    // _onHttp1.close();
   }
 }

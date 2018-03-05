@@ -25,16 +25,16 @@ class Http2Client extends BaseClient {
       new Header.ascii(':scheme', request.url.scheme),
     ];
 
-    request.headers.forEach((k, v) {
-      headers.add(new Header.ascii(k, v));
-    });
-
     var bb = await request.finalize().fold<BytesBuilder>(new BytesBuilder(), (out, list) => out..add(list));
     var body = bb.takeBytes();
 
     if (body.isNotEmpty) {
       headers.add(new Header.ascii('content-length', body.length.toString()));
     }
+
+    request.headers.forEach((k, v) {
+      headers.add(new Header.ascii(k, v));
+    });
 
     var stream = await connection.makeRequest(headers);
 

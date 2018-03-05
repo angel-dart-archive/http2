@@ -82,7 +82,7 @@ configureServer(Angel app) async {
   
       // If the client is HTTP/2 and supports server push, let's
       // send down /style.css and /app.js as well, to improve initial load time.
-      if (res is Http2ResponseContextImpl && res.canPush) {
+      if (res is Http2ResponseContext && res.canPush) {
         await res.push('/style.css').streamFile(styleCss);
         await res.push('/app.js').streamFile(appJs);
       }
