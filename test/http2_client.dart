@@ -25,7 +25,9 @@ class Http2Client extends BaseClient {
       new Header.ascii(':scheme', request.url.scheme),
     ];
 
-    var bb = await request.finalize().fold<BytesBuilder>(new BytesBuilder(), (out, list) => out..add(list));
+    var bb = await request
+        .finalize()
+        .fold<BytesBuilder>(new BytesBuilder(), (out, list) => out..add(list));
     var body = bb.takeBytes();
 
     if (body.isNotEmpty) {
@@ -57,8 +59,10 @@ class Http2Client extends BaseClient {
       (msg) {
         if (msg is HeadersStreamMessage) {
           for (var header in msg.headers) {
-            headers[ASCII.decode(header.name).toLowerCase()] =
-                ASCII.decode(header.value);
+            var name = ASCII.decode(header.name).toLowerCase(),
+                value = ASCII.decode(header.value);
+            headers[name] = value;
+            //print('$name: $value');
           }
         } else if (msg is DataStreamMessage) {
           body.add(msg.bytes);

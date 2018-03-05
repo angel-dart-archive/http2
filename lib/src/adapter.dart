@@ -206,6 +206,7 @@ class AngelHttp2 {
     res.internalReopen();
 
 
+    /*
     if (res.encoders.isNotEmpty) {
       var allowedEncodings =
           req.headers[HttpHeaders.ACCEPT_ENCODING]?.map((str) {
@@ -238,7 +239,7 @@ class AngelHttp2 {
         }
       }
     }
-
+    */
 
     res.headers['content-length'] = outputBuffer.length.toString();
 

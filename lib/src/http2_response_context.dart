@@ -48,6 +48,25 @@ class Http2ResponseContext extends ResponseContext {
       new Header.ascii(':status', statusCode.toString()),
     ];
 
+    if (encoders.isNotEmpty && correspondingRequest != null) {
+      var allowedEncodings =
+          (correspondingRequest.headers['accept-encoding'] ?? []).map((str) {
+        // Ignore quality specifications in accept-encoding
+        // ex. gzip;q=0.8
+        if (!str.contains(';')) return str;
+        return str.split(';')[0];
+      });
+
+      for (var encodingName in allowedEncodings) {
+        String key = encodingName;
+
+        if (encoders.containsKey(encodingName)) {
+          this.headers['content-encoding'] = key;
+          break;
+        }
+      }
+    }
+
     // Add all normal headers
     for (var key in this.headers.keys) {
       headers.add(new Header.ascii(key.toLowerCase(), this.headers[key]));
@@ -98,7 +117,9 @@ class Http2ResponseContext extends ResponseContext {
 
     Stream<List<int>> output = stream;
 
-    if (!headers.containsKey('content-encoding') && encoders.isNotEmpty && correspondingRequest != null) {
+    if ((firstStream || !headers.containsKey('content-encoding')) &&
+        encoders.isNotEmpty &&
+        correspondingRequest != null) {
       var allowedEncodings =
           (correspondingRequest.headers['accept-encoding'] ?? []).map((str) {
         // Ignore quality specifications in accept-encoding
@@ -118,12 +139,14 @@ class Http2ResponseContext extends ResponseContext {
         }
 
         if (encoder != null) {
+          /*
           if (firstStream) {
             this.stream.sendHeaders([
               new Header.ascii(
                   'content-encoding', headers['content-encoding'] = key)
             ]);
           }
+          */
 
           output = encoders[key].bind(output);
           break;

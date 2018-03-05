@@ -119,6 +119,7 @@ void main() {
       var response = await client.get(serverRoot.replace(path: '/stream'),
           headers: {'accept-encoding': 'gzip'});
       expect(response.headers['content-encoding'], 'gzip');
+      //print(response.body);
       var decoded = GZIP.decode(response.bodyBytes);
       expect(UTF8.decode(decoded), jfk);
     });
