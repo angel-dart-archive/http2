@@ -1,3 +1,6 @@
+# DEPRECATED
+As of Angel 2, HTTP/2 support is included out-of-the-box. Just import `package:angel_framework/http2.dart`, and you're ready to go!
+
 # http2
 [![Pub](https://img.shields.io/pub/v/angel_http2.svg)](https://pub.dartlang.org/packages/angel_http2)
 [![build status](https://travis-ci.org/angel-dart/http2.svg)](https://travis-ci.org/angel-dart/http2)
